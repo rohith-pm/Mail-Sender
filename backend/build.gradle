@@ -1,0 +1,37 @@
+plugins {
+	id 'org.springframework.boot' version '2.4.3'
+	id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+	id 'java'
+	id 'war'
+}
+
+group = 'mail.sender'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '14'
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.projectlombok:lombok:1.18.4'
+	providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+	implementation 'com.google.api-client:google-api-client:1.30.0'
+	implementation 'com.google.oauth-client:google-oauth-client-jetty:1.23.0'
+	implementation 'com.google.auth:google-auth-library-oauth2-http:0.21.1'
+	implementation  'com.google.apis:google-api-services-gmail:v1-rev20200406-1.30.9'
+	implementation group: 'com.google.apis', name: 'google-api-services-admin-directory', version: 'directory_v1-rev118-1.25.0'
+
+	implementation group: 'com.sun.mail', name: 'javax.mail', version: '1.6.2'
+//	implementation group: 'javax.mail', name: 'javax.mail-api', version: '1.6.2'
+	implementation group: 'commons-io', name: 'commons-io', version: '2.8.0'
+
+	implementation group: 'org.slf4j', name: 'slf4j-api', version: '1.7.25'
+}
+
+test {
+	useJUnitPlatform()
+}
