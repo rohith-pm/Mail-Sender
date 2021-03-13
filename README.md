@@ -21,7 +21,7 @@ NOTE:
 
 1)Exponential backoff mechanism is implemented for handling too many requests exceptions (i.e.) for status code 429
 
-2)Multi-threading implemented for sending thousands of emails.
+2)Multi-threading implemented for sending many emails quickly.
 
 3)Make sure the attachment size is not above 10 MB
 
