@@ -2,6 +2,7 @@ Application to send huge number of emails using Gmail API for the purpose of tes
 ![image](https://user-images.githubusercontent.com/40338749/111032669-648b9580-8433-11eb-8637-36f945fb1365.png)
 
 Backend: Spring Boot
+
 Frontend: React JS
 
 Steps to run:
