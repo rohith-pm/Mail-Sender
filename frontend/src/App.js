@@ -13,7 +13,7 @@ function App() {
       <header className="App-header">
       </header>
       <Main />
-      {/* <img src={gmailLogo} alt="gmail logo" width="500" height="500px" /> */}
+       <img src={gmailLogo} alt="gmail logo" width="500" height="500px" />
     </div>
   );
 }
