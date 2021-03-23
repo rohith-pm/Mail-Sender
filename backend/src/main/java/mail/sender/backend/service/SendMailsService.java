@@ -136,6 +136,8 @@ public class SendMailsService {
         //Mutli-Threading
         ExecutorService executor = Executors.newFixedThreadPool(10);
         IntStream stream = IntStream.range(1, Integer.parseInt(numberOfEmails) + 1);
+
+        //latch with total tasks count
         CountDownLatch latch = new CountDownLatch(Integer.parseInt(numberOfEmails));
         stream.forEach(i -> {
             executor.submit(() -> {
@@ -148,6 +150,8 @@ public class SendMailsService {
                 }
             });
         });
+
+        //wait for the executor service to complete
         try {
             latch.await();
         } catch (InterruptedException e) {
