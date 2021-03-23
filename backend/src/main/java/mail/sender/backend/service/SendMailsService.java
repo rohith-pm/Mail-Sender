@@ -41,6 +41,10 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.stream.IntStream;
 
 @Scope(value = "prototype")
@@ -128,17 +132,27 @@ public class SendMailsService {
                     SendMailServiceUtils.convert(attachments));
         }
         final MimeMessage finalMessage = mimeMessage;
-        IntStream stream = IntStream.range(1, Integer.parseInt(numberOfEmails) + 1);
         Gmail service = getGmailService();
         //Mutli-Threading
-        stream.parallel().forEach(i -> {
-            try {
-                sendMessage(service, from, finalMessage);
-                LOG.info(subject + "  " + i);
-            } catch (MessagingException | IOException e) {
-                e.printStackTrace();
-            }
+        ExecutorService executor = Executors.newFixedThreadPool(10);
+        IntStream stream = IntStream.range(1, Integer.parseInt(numberOfEmails) + 1);
+        CountDownLatch latch = new CountDownLatch(Integer.parseInt(numberOfEmails));
+        stream.forEach(i -> {
+            executor.submit(() -> {
+                try {
+                    sendMessage(service, from, finalMessage);
+                    LOG.info(subject + "  " + i);
+                    latch.countDown();
+                } catch (MessagingException | IOException e) {
+                    e.printStackTrace();
+                }
+            });
         });
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
