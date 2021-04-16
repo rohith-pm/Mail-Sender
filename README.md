@@ -5,8 +5,6 @@ Backend: Spring Boot
 
 Frontend: React JS
 
-This can be used for the purpose of testing an application created for Gmail 
-
 
 Steps to run:
 
