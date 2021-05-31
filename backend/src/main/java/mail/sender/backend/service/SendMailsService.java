@@ -8,6 +8,7 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
 import com.google.api.client.googleapis.json.GoogleJsonError;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.client.googleapis.services.json.AbstractGoogleJsonClientRequest;
+import com.google.api.client.http.HttpRequestInitializer;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.GenericJson;
@@ -18,6 +19,9 @@ import com.google.api.client.util.store.FileDataStoreFactory;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.GmailScopes;
 import com.google.api.services.gmail.model.Message;
+import com.google.auth.http.HttpCredentialsAdapter;
+import com.google.auth.oauth2.GoogleCredentials;
+import mail.sender.backend.utils.DefaultHttpTransportFactory;
 import mail.sender.backend.utils.SendMailServiceUtils;
 import org.slf4j.Logger;
 import org.springframework.context.annotation.Scope;
@@ -41,10 +45,6 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.stream.IntStream;
 
 @Scope(value = "prototype")
@@ -132,31 +132,17 @@ public class SendMailsService {
                     SendMailServiceUtils.convert(attachments));
         }
         final MimeMessage finalMessage = mimeMessage;
+        IntStream stream = IntStream.range(1, Integer.parseInt(numberOfEmails) + 1);
         Gmail service = getGmailService();
         //Mutli-Threading
-        ExecutorService executor = Executors.newFixedThreadPool(10);
-        IntStream stream = IntStream.range(1, Integer.parseInt(numberOfEmails) + 1);
-
-        //latch with total tasks count
-        CountDownLatch latch = new CountDownLatch(Integer.parseInt(numberOfEmails));
-        stream.forEach(i -> {
-            executor.submit(() -> {
-                try {
-                    sendMessage(service, from, finalMessage);
-                    LOG.info(subject + "  " + i);
-                    latch.countDown();
-                } catch (MessagingException | IOException e) {
-                    e.printStackTrace();
-                }
-            });
+        stream.parallel().forEach(i -> {
+            try {
+                sendMessage(service, from, finalMessage);
+                LOG.info(subject + "  " + i);
+            } catch (MessagingException | IOException e) {
+                e.printStackTrace();
+            }
         });
-
-        //wait for the executor service to complete
-        try {
-            latch.await();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
     }
 
     /**
@@ -203,23 +189,19 @@ public class SendMailsService {
     private Gmail getGmailService() throws IOException {
         JsonFactory jsonFactory = JacksonFactory.getDefaultInstance();
         HttpTransport httpTransport = new NetHttpTransport();
-        return new Gmail.Builder(httpTransport, jsonFactory, getCredential(httpTransport))
-                .setApplicationName("Gmail connector").build();
+        HttpRequestInitializer requestInitializer = new HttpCredentialsAdapter(getCredential(httpTransport));
+        return new Gmail.Builder(httpTransport, jsonFactory, requestInitializer)
+                .setApplicationName("Mail Sender").build();
 
     }
 
-    private Credential getCredential(HttpTransport HTTP_TRANSPORT) throws IOException {
+    private GoogleCredentials getCredential(HttpTransport HTTP_TRANSPORT) throws IOException {
         List<String> SCOPES = Arrays.asList(GmailScopes.MAIL_GOOGLE_COM);
-        JsonFactory JSON_FACTORY = JacksonFactory.getDefaultInstance();
-        InputStream in = new BufferedInputStream(file.getInputStream());
-        GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, new InputStreamReader(in));
-        GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
-                HTTP_TRANSPORT, JSON_FACTORY, clientSecrets, SCOPES)
-                .setDataStoreFactory(new FileDataStoreFactory(new java.io.File("tokens")))
-                .setAccessType("offline")
-                .build();
-        LocalServerReceiver receiver = new LocalServerReceiver.Builder().setPort(8888).build();
-        return new AuthorizationCodeInstalledApp(flow, receiver).authorize("user");
+        GoogleCredentials credential = GoogleCredentials
+                .fromStream(new BufferedInputStream(file.getInputStream()), new DefaultHttpTransportFactory(HTTP_TRANSPORT))
+                .createScoped(SCOPES).createDelegated(getFrom());
+        credential.refreshIfExpired();
+        return credential;
     }
 
     /**
